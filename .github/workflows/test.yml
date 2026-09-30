@@ -15,3 +15,6 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm test
       - run: python tests/prepare_obj_test.py
+      - name: Synthetic installer tests
+        shell: pwsh
+        run: ./tests/install_test.ps1

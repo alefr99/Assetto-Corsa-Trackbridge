@@ -10,6 +10,7 @@ for(const name of ['..\\evil','C:/evil','a//b','a/./b','a\0b','a'.repeat(65536)]
 assert.throws(()=>B.zip([{name:'valid',data:{length:3}}]));
 assert.throws(()=>P.drsZones('[ZONE_0]\nDETECTION=\nSTART=0.2\nEND=0.4'));
 for(const points of [[],[{positionCm:[0,0,0]}],[{positionCm:[0,0,0]},{positionCm:[NaN,0,0]}]]) assert.throws(()=>A.makeLine(points,false));
+assert.throws(()=>P.timingGates([{name:'AC_TIME_0_L',position:[0,0,0]},{name:'AC_TIME_0_L',position:[1,0,0]}]),/Duplicate/);
 const config=require('../build_kalinago_gp2024/trackbridge-project.json');
 const race=A.readCsv(fs.readFileSync(path.join(__dirname,'../build_kalinago_gp2024/lines/fast_lane.ai.csv'),'utf8'));
 const pit=A.readCsv(fs.readFileSync(path.join(__dirname,'../build_kalinago_gp2024/lines/pit_lane.ai.csv'),'utf8'));
@@ -45,6 +46,9 @@ try {
  fs.writeFileSync(path.join(source,'models.ini'),'[MODEL_0]\nFILE=internal.kn5');assert.equal(run('models.ini',path.join(root,'internal')).status,0);
  fs.writeFileSync(path.join(root,'external.kn5'),original);fs.symlinkSync(path.join(root,'external.kn5'),path.join(source,'external.kn5'));
  fs.writeFileSync(path.join(source,'models.ini'),'[MODEL_0]\nFILE=external.kn5');result=run('models.ini',path.join(root,'escaped'));assert.notEqual(result.status,0);assert.match(result.stderr,/outside/,JSON.stringify(result));assert.equal(fs.existsSync(path.join(root,'escaped')),false);
+ // A parse failure after staging begins must not leave a partial export.
+ fs.writeFileSync(path.join(source,'broken.kn5'),'bad KN5');fs.writeFileSync(path.join(source,'models.ini'),'[MODEL_0]\nFILE=broken.kn5');
+ const brokenOutput=path.join(root,'broken-output');assert.notEqual(run('models.ini',brokenOutput).status,0);assert.equal(fs.existsSync(brokenOutput+'.partial'),false);
  fs.writeFileSync(path.join(source,'models.ini'),'[OTHER]\nFILE=demo.kn5');assert.notEqual(run('models.ini',path.join(root,'empty')).status,0);
 } finally {fs.rmSync(root,{recursive:true,force:true});}
 console.log('Stability regressions passed: binary views, ZIP paths, finite geometry, calibration evidence, timing gates, live identity and CLI paths');

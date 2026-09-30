@@ -13,18 +13,27 @@ Estado: conversor experimental reforzado; el mod dentro del juego sigue sin esta
 - Identidad de pista en vivo: se comprueban las posiciones y los recuentos esperados; un array disperso, nulo o un objeto que solo declare `length` no puede pasar como captura válida.
 - CLI: modelos, líneas AI y metadatos se resuelven respecto al directorio del INI; se rechazan enlaces simbólicos que salgan del origen y configuraciones sin modelos.
 - Generación reproducible de `TrackBridge.html` desde `index.html` y los tres módulos. Las pruebas detectan una versión autónoma desactualizada.
-- Suite unificada y GitHub Actions para Node 18/22, más la prueba Python de preparación OBJ.
+- Suite unificada y GitHub Actions para Node 18/22, más pruebas de preparación OBJ e instalación sintética en PowerShell.
+- ZIP del navegador compatible con el adaptador: manifiesto con unidades/transformación y CSV con nombres estables. La selección automática de AI respeta la carpeta exacta del INI; las líneas duplicadas bloquean la exportación.
+- Prueba de integración que ejecuta el controlador real de exportación web con un DOM simulado, lee el ZIP producido y adapta las líneas originales de Kalinago. No sustituye una prueba visual en Chrome/Edge.
+- Tablas spline, nudos y opciones de ajuste: rechazo de errores no finitos, tablas desordenadas y pasos de muestreo inválidos; regresión contra 122 tablas nativas capturadas.
+- Detección de marcadores de cronometraje duplicados y limpieza de exportaciones parciales cuando falla una conversión.
+- Instalador experimental: carpeta Paks explícita, copia y verificación previa en staging, publicación del PAK al final y limpieza de archivos publicados si falla; retirada del PAK antes de archivar sus acompañantes y recuperación si falla el traslado.
 
-Validación local: todas las pruebas JavaScript de `npm test` y `python tests/prepare_obj_test.py` pasan con los archivos de investigación del repositorio. Los casos nuevos incluyen la exportación CLI en subcarpetas y la conservación de los originales. No se han ejecutado Unreal Editor, las herramientas C# ni los scripts PowerShell en este entorno Linux. GitHub Actions debe confirmar la matriz tras publicar la rama.
+Validación local: todas las pruebas JavaScript de `npm test` y `python tests/prepare_obj_test.py` pasan con los archivos de investigación del repositorio. Los casos nuevos incluyen la exportación CLI en subcarpetas y la conservación de los originales. No se han ejecutado Unreal Editor ni las herramientas C#. Las pruebas PowerShell usan contenedores sintéticos y un directorio temporal: nunca prueban la carga en el juego. GitHub Actions debe confirmar la matriz y esas pruebas tras publicar esta revisión.
 
 ## Limitaciones encontradas que siguen abiertas
 
 1. `research/kalinago-repair-pack03/test-manifest.json` declara `installable: false`, `weekendValidated: false`, `raceValidated: false` y `crashFixValidatedInGame: false`. El fallo de cámara registrado no tiene una causa raíz demostrada. Aprobar las pruebas de geometría no demuestra que esté corregido.
 2. `build-race-component.js` contiene decisiones específicas de Kalinago/Bahrain: recuentos, índices de entrada/salida de boxes y puntos de activación. No es un adaptador genérico para cualquier circuito.
 3. Velocidades, DRS, límites de pista, incidentes y asignación de boxes conservan hipótesis sin validar. No se deben presentar como datos deportivos definitivos.
-4. La exportación del navegador y la del CLI usan esquemas de manifiesto y nombres CSV diferentes. El adaptador actual consume directamente la salida del CLI; no se ha unificado aquí la salida web.
-5. Los scripts de instalación/cooking y el escritor C# requieren validación propia en Windows y una instalación compatible del juego. No se ha generado ni sustituido ningún contenedor `.pak`, `.utoc` o `.ucas`.
+4. La salida del navegador ya puede alimentar el adaptador mediante el manifiesto y las líneas CSV. Ambos métodos siguen produciendo preparación de geometría, no paquetes de juego. El adaptador conserva el requisito verificado de escala 100 y yaw 0.
+5. Las pruebas sintéticas del instalador no cubren fallos de energía, concurrencia externa ni la carga real del mod. Los scripts de cooking y el escritor C# requieren una instalación compatible del motor/juego. No se ha generado ni sustituido ningún contenedor `.pak`, `.utoc` o `.ucas`.
 
 ## Prueba necesaria antes de declarar un circuito estable
 
 Conservar el hash del ejecutable, de las entradas y de los contenedores que realmente se prueban. En una instalación de prueba, comprobar carga sin fallos, todas las cámaras y sus transiciones, salida de boxes, retorno y paradas para los equipos, clasificación, sectores, recuento de vueltas, DRS, carrera completa y resultado final. Repetir carga/guardado y una sesión larga; revisar el registro de fallos. Registrar el resultado por circuito y por versión del juego. La comprobación de identidad en vivo solo confirma coordenadas; nunca autoriza por sí misma instalar un paquete.
+
+## Instalador del prototipo existente
+
+El repositorio puede permanecer fuera del juego. El script acepta `-PaksDirectory` con la ruta existente de `Content/Paks`; sin ese argumento conserva la ubicación anterior solo si la carpeta padre se llama `Paks`. Sigue instalando únicamente el paquete experimental 1003 existente, cuyos hashes comprueba. Estas correcciones no reconstruyen ni corrigen el contenido binario de ese paquete.

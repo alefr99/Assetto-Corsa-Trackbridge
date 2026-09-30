@@ -11,8 +11,8 @@ function nearest(p,line){
  return best;
 }
 function fit(points,{closed=true,mandatory=[],toleranceM=.5,maxNodes=210,initialSpacingM=80,sampleStepM=.5,endpointControls=null}={}){
- if(points.length<4||points.some(p=>p.length!==3||!p.every(Number.isFinite)))throw Error('Invalid source points');
- if(!(toleranceM>0&&maxNodes>=4&&sampleStepM>0&&initialSpacingM>0))throw Error('Invalid fitting options');
+ if(!Array.isArray(points)||points.length<4||Array.from(points).some(p=>!Array.isArray(p)||p.length!==3||!Array.from(p).every(Number.isFinite)))throw Error('Invalid source points');
+ if(![toleranceM,maxNodes,sampleStepM,initialSpacingM].every(Number.isFinite)||!Number.isInteger(maxNodes)||!(toleranceM>0&&maxNodes>=4&&sampleStepM>0&&initialSpacingM>0))throw Error('Invalid fitting options');
  if(endpointControls&&(closed||[endpointControls.before,endpointControls.after].some(p=>!Array.isArray(p)||p.length!==3||!p.every(Number.isFinite))))throw Error('Invalid endpoint controls');
  const n=points.length,selected=new Set([0,...mandatory]);if(!closed)selected.add(n-1);
  if([...selected].some(i=>!Number.isInteger(i)||i<0||i>=n))throw Error('Invalid mandatory index');
