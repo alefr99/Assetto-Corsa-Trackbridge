@@ -1,4 +1,4 @@
-#Assetto-Corsa-TrackBridge
+# Assetto-Corsa-TrackBridge
 
 Experimental tool for converting Assetto Corsa tracks for use in F1 Manager 2024.
 
@@ -27,3 +27,16 @@ Status
 Early Development / Experimental
 
 Use at your own risk and always keep backups of your original game files.
+
+## Development checks
+
+Node.js 18+; no npm dependencies are required.
+
+```sh
+npm test
+python tests/prepare_obj_test.py
+```
+
+After changing `index.html`, `core.js`, `project.js` or `app.js`, run `npm run build` to regenerate the standalone `TrackBridge.html`. Tests verify that the generated file is current.
+
+See [STABILITY.md](STABILITY.md) for the reviewed fixes, remaining limitations and in-game validation requirements. Passing offline tests does not make the experimental game containers installable.
