@@ -1,7 +1,7 @@
 'use strict';
 const distance=(a,b)=>Math.hypot(...a.map((v,k)=>v-b[k]));
 function knots(points) {
-  if(points.length!==4 || points.some(p=>p.length!==3 || !p.every(Number.isFinite)))throw Error('Expected four finite XYZ points');
+  if(!Array.isArray(points)||points.length!==4 || Array.from(points).some(p=>!Array.isArray(p)||p.length!==3 || !Array.from(p).every(Number.isFinite)))throw Error('Expected four finite XYZ points');
   const t=[0];
   for(let i=1;i<4;i++){
     const step=Math.sqrt(distance(points[i],points[i-1]));
@@ -11,6 +11,7 @@ function knots(points) {
   return t;
 }
 function evaluate(points,t,k=knots(points)) {
+  if(!Array.isArray(k)||k.length!==4||!Array.from(k).every(Number.isFinite)||k.some((v,i)=>i&&v<=k[i-1]))throw Error('Invalid spline knots');
   if(!Number.isFinite(t)||t<k[1]-1e-4||t>k[2]+1e-4)throw Error('Parameter outside segment');
   const mix=(a,b,x,y)=>a.map((v,j)=>v*(y-t)/(y-x)+b[j]*(t-x)/(y-x));
   const a=[0,1,2].map(j=>mix(points[j],points[j+1],k[j],k[j+1]));
@@ -19,6 +20,12 @@ function evaluate(points,t,k=knots(points)) {
 }
 function parameterAtDistance(table,d,startParameter) {
   if(!Array.isArray(table)||!table.length||!Number.isFinite(d)||d<0||d>table.at(-1).distanceM)throw Error('Distance outside spline table');
+  if(!Number.isFinite(startParameter))throw Error('Invalid start parameter');
+  let previousDistance=0,previousParameter=startParameter;
+  for(const row of table){
+    if(!row||!Number.isFinite(row.distanceM)||!Number.isFinite(row.parameter)||row.distanceM<=previousDistance||row.parameter<=previousParameter)throw Error('Non-increasing or nonfinite spline table');
+    previousDistance=row.distanceM;previousParameter=row.parameter;
+  }
   let low=0,high=table.length-1;
   while(low<high){const mid=(low+high)>>1;if(table[mid].distanceM<d)low=mid+1;else high=mid;}
   const before=low?table[low-1]:{distanceM:0,parameter:startParameter},after=table[low];

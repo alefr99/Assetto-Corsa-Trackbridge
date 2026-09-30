@@ -3,6 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const {knots,evaluate,distance}=require('./native-spline');
 function buildCurves(fit,stepM=.1){
  if(!fit.passed)throw Error('Cannot project onto a failed fit');
+ if(!Number.isFinite(stepM)||stepM<=0)throw Error('Invalid curve sample step');
  const p=fit.nodes.map(n=>n.positionM),n=p.length,curves=[];
  for(let i=0;i<n-(fit.closed?0:1);i++){
   const start=p[i],end=p[(i+1)%n];
@@ -18,6 +19,7 @@ function buildCurves(fit,stepM=.1){
  return curves;
 }
 function projectMarker(p,curves){
+ if(!Array.isArray(p)||p.length!==3||!Array.from(p).every(Number.isFinite)||!Array.isArray(curves)||!curves.length)throw Error('Invalid marker projection');
  let best={distanceM:Infinity};
  for(let i=0;i<curves.length;i++){
   const c=curves[i];
