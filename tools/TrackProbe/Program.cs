@@ -11,7 +11,7 @@ using CUE4Parse.MappingsProvider.Usmap;
 using System.Security.Cryptography;
 
 if (args.Length < 3) {
-    Console.Error.WriteLine("TrackProbe PAKS OUTPUT FMODEL_SETTINGS [--metadata-only | --usmap FILE] [--overlay DIR] [--package-list JSON] [--shader-maps] [PACKAGE_PATH ...]");
+    Console.Error.WriteLine("TrackProbe PAKS OUTPUT FMODEL_SETTINGS|--standalone [--metadata-only | --usmap FILE] [--overlay DIR] [--package-list JSON] [--shader-maps] [PACKAGE_PATH ...]");
     return 1;
 }
 var root = Path.GetFullPath(args[0]);
@@ -23,6 +23,7 @@ string? overlayDirectory = null;
 var metadataOnly = false;
 var readShaderMaps = false;
 var recursive = false;
+int[]? exportIndices = null;
 for (int i = 3; i < args.Length; i++) {
     if (args[i] == "--recursive") recursive = true;
     else if (args[i] == "--metadata-only") metadataOnly = true;
@@ -34,27 +35,41 @@ for (int i = 3; i < args.Length; i++) {
         if (list.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Empty package path in list");
         packages.AddRange(list);
     }
+    else if (args[i] == "--export-indices" && i + 1 < args.Length) {
+        exportIndices = JsonConvert.DeserializeObject<int[]>(File.ReadAllText(args[++i])) ?? throw new ArgumentException("Expected export index array");
+        if (exportIndices.Length == 0 || exportIndices.Any(i => i < 0) || exportIndices.Distinct().Count() != exportIndices.Length)
+            throw new ArgumentException("Export indices must be nonempty, unique and nonnegative");
+    }
     else if (args[i].StartsWith("--")) throw new ArgumentException("Unknown or incomplete option: " + args[i]);
     else packages.Add(args[i]);
 }
 if (metadataOnly && mappingFile != null) throw new ArgumentException("Choose metadata-only or a mapping file, not both");
+if (exportIndices != null && (metadataOnly || packages.Count != 1)) throw new ArgumentException("Selected exports require exactly one package and property decoding");
+// Unencrypted, uncompressed research containers can be checked without a game
+// installation, credentials, FModel settings or its Windows Oodle library.
+var standalone = args[2] == "--standalone";
+var version = EGame.GAME_UE5_1;
+string? key = null;
+if (!standalone) {
 var config = JObject.Parse(File.ReadAllText(args[2]));
 var perDirectory = (JObject?)config["PerDirectory"] ?? throw new Exception("Missing FModel game settings");
 var game = perDirectory.Properties().FirstOrDefault(p => string.Equals(Path.GetFullPath(p.Name), root, StringComparison.OrdinalIgnoreCase))?.Value
     ?? throw new Exception("No FModel settings match the requested game directory");
-var key = game["AesKeys"]?["mainKey"]?.Value<string>() ?? throw new Exception("No configured game key");
-var version = (EGame)(game["UeVersion"]?.Value<int>() ?? throw new Exception("No configured engine version"));
+key = game["AesKeys"]?["mainKey"]?.Value<string>() ?? throw new Exception("No configured game key");
+version = (EGame)(game["UeVersion"]?.Value<int>() ?? throw new Exception("No configured engine version"));
 var outputBase = config["OutputDirectory"]?.Value<string>() ?? "";
 var oodle = Path.Combine(outputBase, ".data", "oodle-data-shared.dll");
 if (!File.Exists(oodle)) throw new FileNotFoundException("Existing FModel Oodle library required", oodle);
 OodleHelper.Initialize(oodle);
+}
 using var provider = new DefaultFileProvider(root, recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly, new VersionContainer(version), StringComparer.OrdinalIgnoreCase);
 provider.ReadShaderMaps = readShaderMaps;
 provider.Initialize();
 if (overlayDirectory != null) {
     foreach (var file in Directory.EnumerateFiles(overlayDirectory).Where(f => Path.GetExtension(f) is ".utoc" or ".pak").Where(f => !Path.GetFileName(f).StartsWith("global."))) provider.RegisterVfs(file);
 }
-provider.SubmitKey(new FGuid(), new FAesKey(key));
+if (key != null) provider.SubmitKey(new FGuid(), new FAesKey(key));
+else provider.Mount();
 provider.PostMount();
 // An empty provider permits header inspection only. Never deserialize properties with it.
 if (metadataOnly) provider.MappingsContainer = new HeaderOnlyMappings();
@@ -119,6 +134,15 @@ foreach (var requested in packages) {
             Console.WriteLine($"Metadata {package}: {loaded.ExportMapLength} exports");
             continue;
         }
+        if (exportIndices != null) {
+            if (exportIndices.Any(i => i >= loaded.ExportMapLength)) throw new ArgumentException("Export index outside package");
+            var selected = exportIndices.Select(i => new { index = i, value = loaded.ExportsLazy[i].Value }).ToArray();
+            var selectedPath = "selected-properties/" + package + ".json";
+            Save(selectedPath, selected);
+            results.Add(new { package, container, output = selectedPath, exports = selected.Length, selectedExportsOnly = true });
+            Console.WriteLine($"Decoded {selected.Length} selected exports from {package}");
+            continue;
+        }
         var objects = loaded.GetExports().ToArray();
         var relative = "properties/" + package.Replace(':', '_') + ".json";
         Save(relative, objects);
@@ -133,7 +157,7 @@ foreach (var requested in packages) {
 Save("manifest.json", new {
     schemaVersion = 1, installable = false, root, overlayDirectory, version = version.ToString(),
     cue4Parse = typeof(DefaultFileProvider).Assembly.GetName().Version?.ToString(),
-    createdUtc = DateTime.UtcNow, files = paths.Length, metadataOnly, readShaderMaps,
+    createdUtc = DateTime.UtcNow, files = paths.Length, metadataOnly, readShaderMaps, standalone, exportIndices,
     mappingFile, mappingSha256 = mappingFile == null ? null : Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(mappingFile))).ToLowerInvariant(), results,
     scope = "Property export for research; no cooking, packaging or game validation."
 });

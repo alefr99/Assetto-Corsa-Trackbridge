@@ -1,13 +1,14 @@
 param(
     [Parameter(Mandatory=$true)][ValidateSet('Install','Rollback')][string]$Mode,
-    [string]$PaksDirectory
+    [string]$PaksDirectory,
+    [string]$PackageDirectory
 )
 $ErrorActionPreference = 'Stop'
 $project = $PSScriptRoot
 # An explicit directory lets the repository stay outside the game installation.
 $paks = if ($PaksDirectory) { [IO.Path]::GetFullPath($PaksDirectory) } else { Split-Path -Parent $project }
 if (!(Test-Path -LiteralPath $paks -PathType Container) -or (Split-Path -Leaf $paks) -ne 'Paks') { throw 'Specify the existing game Content/Paks directory with -PaksDirectory.' }
-$package = Join-Path $project 'research/kalinago-repair-pack03'
+$package = if ($PackageDirectory) { [IO.Path]::GetFullPath($PackageDirectory) } else { Join-Path $project 'research/kalinago-repair-pack03' }
 $manifest = Get-Content -LiteralPath (Join-Path $package 'test-manifest.json') -Raw | ConvertFrom-Json
 if (Get-Process F1Manager24 -ErrorAction SilentlyContinue) { throw 'Close F1 Manager before installing or rolling back.' }
 if ($Mode -eq 'Install' -and ($manifest.doNotInstall -eq $true -or $manifest.runtimeRejected -eq $true)) { throw 'This build was rejected after a runtime failure.' }
@@ -19,7 +20,11 @@ if ($Mode -eq 'Install' -and $project.StartsWith($prefix, [StringComparison]::Or
     if ($unexpected.Count) { throw 'Research PAK files are active under the game directory. Disable them before proceeding.' }
 }
 $files = @($manifest.files.name)
-if ($files.Count -ne 3 -or @($files | Select-Object -Unique).Count -ne 3 -or @($files | Where-Object { $_ -notmatch '^TrackBridge_Kalinago_(1003)_P\.(pak|utoc|ucas)$' }).Count) { throw 'Unexpected manifest file set' }
+if ($files.Count -ne 3 -or @($files | Select-Object -Unique).Count -ne 3 -or @($files | Where-Object { $_ -notmatch '^TrackBridge_Kalinago_(1003|1005)_P\.(pak|utoc|ucas)$' }).Count -or @($files | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) } | Select-Object -Unique).Count -ne 1) { throw 'Unexpected manifest file set' }
+if ($Mode -eq 'Install') {
+    $active = @(Get-ChildItem -LiteralPath $paks -Recurse -File | Where-Object { $_.Name -match '^TrackBridge_Kalinago.*\.(pak|utoc|ucas)$' })
+    if ($active.Count) { throw 'Remove the active Kalinago test package before installing another variant.' }
+}
 foreach ($name in $files) {
     $entry = @($manifest.files | Where-Object name -eq $name)
     if ($entry.Count -ne 1 -or $entry[0].sha256 -notmatch '^[a-fA-F0-9]{64}$') { throw "Invalid manifest entry: $name" }

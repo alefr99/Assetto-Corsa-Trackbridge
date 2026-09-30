@@ -22,7 +22,17 @@ if(args.Length==5 && args[3]=="--level-patch") {
     foreach(var edit in root.GetProperty("exports").EnumerateArray()) {
         var e=(NormalExport)level.Exports[edit.GetProperty("index").GetInt32()];
         if(e.ObjectName.ToString()!=edit.GetProperty("name").GetString())throw new Exception("Export name mismatch");
-        foreach(var field in edit.GetProperty("Properties").EnumerateObject())ComponentPatch.Apply(level,e.Data.Single(p=>p.Name.ToString()==field.Name),field.Value);
+        foreach(var field in edit.GetProperty("Properties").EnumerateObject()) {
+            var property=e.Data.SingleOrDefault(p=>p.Name.ToString()==field.Name);
+            // A zero-valued unversioned uint32 may have no serialized property.
+            // Materialize only these known camera fields, using their SDK type.
+            if(property==null && (field.Name is "TrackNodeID" or "LastTrackNodeID") && e.ClassIndex.IsImport() && e.ClassIndex.ToImport(level).ObjectName.ToString()=="RaceSimCameraComponent") {
+                property=new UInt32PropertyData(new FName(level,field.Name));
+                e.Data.Add(property);
+            }
+            if(property==null)throw new Exception("Missing patch property: "+e.ObjectName+"."+field.Name);
+            ComponentPatch.Apply(level,property,field.Value);
+        }
     }
     Directory.CreateDirectory(args[2]);var patchedOutput=Path.Combine(args[2],Path.GetFileName(args[0]));level.Write(patchedOutput);
     if(!new UAsset(patchedOutput,EngineVersion.VER_UE5_1,new Usmap(args[1])).VerifyBinaryEquality())throw new Exception("Output roundtrip failed");

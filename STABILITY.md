@@ -20,7 +20,7 @@ Estado: conversor experimental reforzado; el mod dentro del juego sigue sin esta
 - Detección de marcadores de cronometraje duplicados y limpieza de exportaciones parciales cuando falla una conversión.
 - Instalador experimental: carpeta Paks explícita, copia y verificación previa en staging, publicación del PAK al final y limpieza de archivos publicados si falla; retirada del PAK antes de archivar sus acompañantes y recuperación si falla el traslado.
 
-Validación local: todas las pruebas JavaScript de `npm test` y `python tests/prepare_obj_test.py` pasan con los archivos de investigación del repositorio. Los casos nuevos incluyen la exportación CLI en subcarpetas y la conservación de los originales. No se han ejecutado Unreal Editor ni las herramientas C#. Las pruebas PowerShell usan contenedores sintéticos y un directorio temporal: nunca prueban la carga en el juego. GitHub Actions debe confirmar la matriz y esas pruebas tras publicar esta revisión.
+Validación local: pasan `npm test`, `python tests/prepare_obj_test.py` y `python tests/zen_camera_patch_test.py`. Las herramientas C# TrackWriter y TrackProbe se han recompilado con .NET 10 y ejecutado sobre el candidato 1005. No se ha ejecutado Unreal Editor ni F1 Manager. Las pruebas PowerShell usan contenedores sintéticos y un directorio temporal: nunca prueban la carga en el juego.
 
 ## Limitaciones encontradas que siguen abiertas
 
@@ -28,7 +28,7 @@ Validación local: todas las pruebas JavaScript de `npm test` y `python tests/pr
 2. `build-race-component.js` contiene decisiones específicas de Kalinago/Bahrain: recuentos, índices de entrada/salida de boxes y puntos de activación. No es un adaptador genérico para cualquier circuito.
 3. Velocidades, DRS, límites de pista, incidentes y asignación de boxes conservan hipótesis sin validar. No se deben presentar como datos deportivos definitivos.
 4. La salida del navegador ya puede alimentar el adaptador mediante el manifiesto y las líneas CSV. Ambos métodos siguen produciendo preparación de geometría, no paquetes de juego. El adaptador conserva el requisito verificado de escala 100 y yaw 0.
-5. Las pruebas sintéticas del instalador no cubren fallos de energía, concurrencia externa ni la carga real del mod. Los scripts de cooking y el escritor C# requieren una instalación compatible del motor/juego. No se ha generado ni sustituido ningún contenedor `.pak`, `.utoc` o `.ucas`.
+5. Las pruebas sintéticas del instalador no cubren fallos de energía, concurrencia externa ni la carga real del mod. El cooking de recursos nuevos requiere un motor compatible. El candidato de cámara 1005 sí reconstruye los contenedores existentes sin recocinar recursos y conserva las dependencias del prototipo 1003; sigue pendiente de validación dentro del juego.
 
 ## Prueba necesaria antes de declarar un circuito estable
 
@@ -36,4 +36,10 @@ Conservar el hash del ejecutable, de las entradas y de los contenedores que real
 
 ## Instalador del prototipo existente
 
-El repositorio puede permanecer fuera del juego. El script acepta `-PaksDirectory` con la ruta existente de `Content/Paks`; sin ese argumento conserva la ubicación anterior solo si la carpeta padre se llama `Paks`. Sigue instalando únicamente el paquete experimental 1003 existente, cuyos hashes comprueba. Estas correcciones no reconstruyen ni corrigen el contenido binario de ese paquete.
+Mantén el repositorio y la descarga fuera del juego. El script acepta `-PaksDirectory` con la ruta existente de `Content/Paks` y `-PackageDirectory` para elegir el candidato 1005 descargado. Sin ese último argumento conserva el prototipo 1003. Rechaza juegos de archivos de versiones mezcladas y la presencia de otra variante Kalinago activa.
+
+## Reconstrucción de cámara 1005
+
+La cámara opcional cuyo nodo inicial cero se omitía se remapea y recoloca. Se excluye la cámara spline con trayectoria de Bahrain de la lista de actores, preservando sus exportaciones. Pasan 165 líneas de visión muestreadas para 33 cámaras contra la geometría de origen. Se preservan exactamente 399 bloques de recursos, 132 exportaciones no editadas del nivel y las dependencias de 293 paquetes. Un lector CUE4Parse independiente verifica 122 exportaciones nativas, sus enlaces y la cobertura de carrera/boxes. Los Blueprint del juego no disponibles en el entorno no se decodifican.
+
+`scripts/analyze-camera-minidump.py` confirma desde el contexto de excepción el acceso inválido a `RaceSimCameraComponent + 0xb90`. Falta la memoria del objeto y código del llamador: la causa raíz y su reparación en ejecución no están demostradas. El manifiesto de 1005 conserva `installable: false` y `crashFixValidatedInGame: false`. Consulta [CAMERA-TEST.md](CAMERA-TEST.md) para instalar, probar, retirar y reconstruir el candidato.
