@@ -1,0 +1,7 @@
+{
+  "name": "assetto-corsa-trackbridge",
+  "version": "0.2.1",
+  "private": true,
+  "engines": {"node": ">=18"},
+  "scripts": {"build": "node scripts/build-standalone.js", "test": "node scripts/test.js"}
+}

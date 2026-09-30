@@ -6,33 +6,37 @@ const WORLD = '/Game/Circuits/Bahrain/Lvl_Bahrain.Lvl_Bahrain';
 
 function validateLiveTrack(fit, snapshot) {
   const failures = [];
-  const topology = fit.topology;
+  const topology = fit && fit.topology;
   if (!topology || !Array.isArray(topology.positionsCm) || !topology.positionsCm.length)
     throw new Error('Expected Kalinago topology with positionsCm');
+  if (!Number.isInteger(topology.raceNodeCount) || topology.raceNodeCount < 3 || !Number.isInteger(topology.pitNodeCount) || topology.pitNodeCount < 2 || topology.raceNodeCount + topology.pitNodeCount !== topology.positionsCm.length) throw new Error('Invalid expected topology counts');
+  for (const p of topology.positionsCm) if (!p || ![p.X,p.Y,p.Z].every(Number.isFinite)) throw new Error('Invalid expected position');
+  if (!snapshot || typeof snapshot !== 'object' || !Array.isArray(snapshot.tracks)) throw new Error('Invalid runtime snapshot');
   if (fit.targetSlot?.toLowerCase() !== 'bahrain') failures.push('Unexpected target slot');
   if (snapshot.executableSha256 !== EXPECTED_EXE) failures.push('Executable does not match validated offsets');
   if (snapshot.world !== WORLD) failures.push('Bahrain slot is not loaded');
   if (snapshot.errors !== 0) failures.push('Runtime capture contains read errors');
-  const tracks = (snapshot.tracks || []).filter(t => t.fullPath === WORLD + '.PersistentLevel.RaceSimTrackActor_1.RaceTrackSpline');
+  const tracks = (snapshot.tracks || []).filter(t => t && t.fullPath === WORLD + '.PersistentLevel.RaceSimTrackActor_1.RaceTrackSpline');
   if (tracks.length !== 1) failures.push('Expected exactly one live race component in the loaded world');
   let maxPositionErrorCm = null;
   if (tracks.length === 1) {
     const track = tracks[0];
     if (track.raceCount !== topology.raceNodeCount || track.pitCount !== topology.pitNodeCount)
       failures.push('Race/pit node counts differ from Kalinago');
-    if (track.nodes?.length !== topology.positionsCm.length) failures.push('Total node count differs from Kalinago');
+    if (!Array.isArray(track.nodes) || track.nodes.length !== topology.positionsCm.length) failures.push('Total node count differs from Kalinago');
     else {
       maxPositionErrorCm = 0;
-      track.nodes.forEach((node, i) => {
-        if (node.index !== i || !Array.isArray(node.position) || node.position.length !== 3 || !node.position.every(Number.isFinite)) {
+      for (let i = 0; i < track.nodes.length; i++) {
+        const node = track.nodes[i];
+        if (!node || node.index !== i || !Array.isArray(node.position) || node.position.length !== 3 || !Array.from(node.position).every(Number.isFinite)) {
           failures.push('Invalid live node ' + i);
-          return;
+          continue;
         }
         const expected = topology.positionsCm[i];
         const values = [expected.X, expected.Y, expected.Z];
         if (!values.every(Number.isFinite)) throw new Error('Invalid expected position');
         maxPositionErrorCm = Math.max(maxPositionErrorCm, ...values.map((v, axis) => Math.abs(v - node.position[axis])));
-      });
+      }
       if (maxPositionErrorCm > 0.1) failures.push('Live coordinates differ from Kalinago by more than 0.1 cm');
     }
   }
