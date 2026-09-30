@@ -19,7 +19,7 @@ function readCsv(text) {
 }
 function makeLine(points,closed) {
   if(!Array.isArray(points) || points.length < (closed ? 3 : 2)) throw Error('Insufficient line points');
-  for(const p of points) if(!p || !Array.isArray(p.positionCm) || p.positionCm.length!==3 || !p.positionCm.every(Number.isFinite)) throw Error('Expected finite XYZ line points');
+  for(const p of points) if(!p || !Array.isArray(p.positionCm) || p.positionCm.length!==3 || !Array.from(p.positionCm).every(Number.isFinite)) throw Error('Expected finite XYZ line points');
   const segments=[], cumulative=[0];
   for(let i=0;i<points.length-(closed?0:1);i++) {
     const a=points[i].positionCm, b=points[(i+1)%points.length].positionCm;
@@ -30,7 +30,7 @@ function makeLine(points,closed) {
   return {points,closed,segments,cumulative,lengthM:cumulative.at(-1)};
 }
 function project(line,p) {
-  if(!Array.isArray(p)||p.length!==3||!p.every(Number.isFinite)) throw Error('Expected finite XYZ projection');
+  if(!Array.isArray(p)||p.length!==3||!Array.from(p).every(Number.isFinite)) throw Error('Expected finite XYZ projection');
   let best;
   line.segments.forEach((s,i)=>{
     const den=s.delta.reduce((v,x)=>v+x*x,0);
@@ -41,13 +41,13 @@ function project(line,p) {
   return best;
 }
 function transform(p,t) {
-  if(!Array.isArray(p)||p.length!==3||!p.every(Number.isFinite)||!t) throw Error('Expected finite XYZ transform');
+  if(!Array.isArray(p)||p.length!==3||!Array.from(p).every(Number.isFinite)||!t) throw Error('Expected finite XYZ transform');
   if(t.axisMap !== 'x,z,y' || t.scale !== 100 || t.yaw !== 0) throw Error('Adapter currently requires the verified x,z,y; scale 100; yaw 0 export');
   return [p[0]*100,p[2]*100,p[1]*100];
 }
 function cross(a,b) {return a[0]*b[1]-a[1]*b[0];}
 function gateCrossings(line,left,right) {
-  for(const p of [left,right]) if(!Array.isArray(p)||p.length!==3||!p.every(Number.isFinite)) throw Error('Expected finite XYZ gate');
+  for(const p of [left,right]) if(!Array.isArray(p)||p.length!==3||!Array.from(p).every(Number.isFinite)) throw Error('Expected finite XYZ gate');
   const r=right.map((v,k)=>v-left[k]), hits=[];
   line.segments.forEach((s,i)=>{
     const den=cross(s.delta,r); if(Math.abs(den)<1e-8)return;

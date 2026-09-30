@@ -18,6 +18,7 @@ for(const value of [undefined,null,NaN,Infinity,-1]) for(const key of ['maxInver
  const invalid=structuredClone(calibration);invalid.evidence[key]=value;
  assert.throws(()=>A.adapt(config,race,pit,invalid),/calibration/);
 }
+assert.throws(()=>A.transform(new Array(3),config.transform));
 const coincident=structuredClone(config);coincident.timingGates[1]={...coincident.timingGates[0],index:1};
 assert.throws(()=>A.adapt(coincident,race,pit),/Sector order/);
 const fit=require('../research/kalinago-fit03.json'),stock=require('../research/bahrain_live04/snapshot.json');
@@ -25,6 +26,7 @@ const snapshot=structuredClone(stock),track=snapshot.tracks.find(t=>t.fullPath.e
 track.raceCount=fit.topology.raceNodeCount;track.pitCount=fit.topology.pitNodeCount;
 track.nodes=fit.topology.positionsCm.map((p,index)=>({index,position:[p.X,p.Y,p.Z]}));
 assert.equal(validateLiveTrack(fit,snapshot).passed,true);
+const originalPosition=track.nodes[0].position;track.nodes[0].position=new Array(3);assert.equal(validateLiveTrack(fit,snapshot).passed,false);track.nodes[0].position=originalPosition;
 const saved=track.nodes[0];delete track.nodes[0];assert.equal(validateLiveTrack(fit,snapshot).passed,false);
 track.nodes[0]=null;assert.equal(validateLiveTrack(fit,snapshot).passed,false);
 track.nodes[0]=saved;track.nodes={length:fit.topology.positionsCm.length};assert.equal(validateLiveTrack(fit,snapshot).passed,false);

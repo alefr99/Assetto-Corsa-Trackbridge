@@ -28,7 +28,7 @@ function validateLiveTrack(fit, snapshot) {
       maxPositionErrorCm = 0;
       for (let i = 0; i < track.nodes.length; i++) {
         const node = track.nodes[i];
-        if (!node || node.index !== i || !Array.isArray(node.position) || node.position.length !== 3 || !node.position.every(Number.isFinite)) {
+        if (!node || node.index !== i || !Array.isArray(node.position) || node.position.length !== 3 || !Array.from(node.position).every(Number.isFinite)) {
           failures.push('Invalid live node ' + i);
           continue;
         }
