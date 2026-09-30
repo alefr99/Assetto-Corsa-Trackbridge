@@ -1,0 +1,15 @@
+{
+  "offlineReadbackPassed": true,
+  "runtimeValidated": false,
+  "decodedExports": 122,
+  "cameraEdits": 75,
+  "activeRemappedCameras": 33,
+  "raceNodesCovered": 129,
+  "pitNodesCovered": 28,
+  "splineCameraExcluded": true,
+  "unchangedResourceChunks": 399,
+  "preservedUneditedExports": 132,
+  "packageDependenciesPreserved": 293,
+  "sampledVisiblePoints": 165,
+  "fullGameClassesDecoded": false
+}

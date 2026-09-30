@@ -2,6 +2,8 @@
 
 Experimental tool for converting Assetto Corsa tracks for use in F1 Manager 2024.
 
+Camera candidate 1005: [Spanish installation, runtime checks, rollback and rebuild instructions](CAMERA-TEST.md). The containers have been rebuilt and checked offline; the recorded camera crash still requires an in-game retest.
+
 This is an early development version of the project and is currently available only in Russian.
 
 The tool was created with the help of ChatGPT and is still experimental. Track conversion is not fully automated yet, and some parts of converted tracks may not work correctly.

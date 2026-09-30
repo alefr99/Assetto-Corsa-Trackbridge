@@ -39,5 +39,31 @@ try {
     Reject { & $script -Mode Install -PaksDirectory $root }
     $manifest.files=@($files[0],$files[0],$files[2]);Save
     Reject { & $script -Mode Install -PaksDirectory $paks }
+    # A downloaded camera candidate can live outside the repository and Paks.
+    $candidate = Join-Path $root 'candidate'
+    New-Item -ItemType Directory -Path $candidate | Out-Null
+    $candidateFiles = @()
+    foreach ($ext in @('pak','utoc','ucas')) {
+        $name = "TrackBridge_Kalinago_1005_P.$ext"
+        $sourceName = if ($ext -eq 'pak') { $name + '.disabled' } else { $name }
+        $source = Join-Path $candidate $sourceName
+        [IO.File]::WriteAllText($source, "candidate-$ext")
+        $candidateFiles += @{name=$name;sha256=(Get-FileHash $source -Algorithm SHA256).Hash;bytes=(Get-Item $source).Length}
+    }
+    $candidateManifest = @{installable=$false;offlineReadbackPassed=$true;files=$candidateFiles}
+    $candidateManifestPath = Join-Path $candidate 'test-manifest.json'
+    $candidateManifest | ConvertTo-Json -Depth 8 | Set-Content $candidateManifestPath
+    [IO.File]::WriteAllText((Join-Path $paks 'TrackBridge_Kalinago_1003_P.utoc'), 'active-old-container')
+    Reject { & $script -Mode Install -PaksDirectory $paks -PackageDirectory $candidate }
+    Remove-Item (Join-Path $paks 'TrackBridge_Kalinago_1003_P.utoc')
+    $candidateFiles[1].name='TrackBridge_Kalinago_1003_P.utoc'
+    $candidateManifest | ConvertTo-Json -Depth 8 | Set-Content $candidateManifestPath
+    Reject { & $script -Mode Install -PaksDirectory $paks -PackageDirectory $candidate }
+    $candidateFiles[1].name='TrackBridge_Kalinago_1005_P.utoc'
+    $candidateManifest | ConvertTo-Json -Depth 8 | Set-Content $candidateManifestPath
+    & $script -Mode Install -PaksDirectory $paks -PackageDirectory $candidate
+    Assert (@(Get-ChildItem $paks -File).Count -eq 3) 'Candidate companions missing'
+    & $script -Mode Rollback -PaksDirectory $paks -PackageDirectory $candidate
+    Assert (@(Get-ChildItem $paks -Force).Count -eq 0) 'Candidate rollback left containers'
     Write-Output 'Synthetic installer tests passed: hashes, rejected build, install, collision, rollback, directory and duplicate manifest'
 } finally { if (Test-Path $root) { Remove-Item $root -Recurse -Force } }

@@ -1,0 +1,21 @@
+{
+  "dumpSha256": "45143ce847d919ca97d0acd9be5e87df13460c093052ec20c9e425c3a2392c95",
+  "exceptionCode": "0xc0000005",
+  "exceptionAddress": "0x14225c536",
+  "exceptionContextRIP": "0x14225c536",
+  "faultRva": "0x225c536",
+  "exceptionContextRCX": "0xeeffffff08",
+  "instructionBytes": "80b9900b000000",
+  "knownCameraCooldownRead": true,
+  "instruction": "cmp byte ptr [rcx + 0xb90], 0",
+  "calculatedReadAddress": "0xef00000a98",
+  "sdkField": "URaceSimCameraComponent.DoesCameraHaveCooldownAfterUse @ 0xb90",
+  "cameraObjectMemoryCaptured": false,
+  "callerCodeAndLifetimeProven": false,
+  "rootCauseProven": false,
+  "limitations": [
+    "The exception context proves an invalid camera-field read, not its origin",
+    "Missing camera object memory and caller code prevent proving an out-of-bounds selection or object lifetime fault",
+    "A container readback does not prove that the runtime crash is fixed"
+  ]
+}

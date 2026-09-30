@@ -1,0 +1,56 @@
+name: Rebuild camera candidate 1005
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'prepare-camera-repair.js'
+      - 'camera-visibility-input.js'
+      - 'audit-camera-package.js'
+      - 'scripts/*camera*'
+      - 'tools/TrackWriter/**'
+      - 'tools/TrackProbe/**'
+      - 'research/camera-repair1005/**'
+      - '.github/workflows/camera-candidate.yml'
+permissions:
+  contents: read
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Fetch only the baseline UCAS from LFS
+        run: git lfs pull --include="research/kalinago-repair-pack03/TrackBridge_Kalinago_1003_P.ucas"
+      - name: Get pinned retoc release and verify archive
+        run: |
+          curl --fail --location --retry 3 https://github.com/trumank/retoc/releases/download/v0.1.5/retoc_cli-x86_64-unknown-linux-gnu.tar.xz -o "$RUNNER_TEMP/retoc.tar.xz"
+          printf '%s  %s\n' '3c309a4aea0c6d0a5c6ee31b1d1b32768eb86ac67e3a1890d677eabe6ce26b36' "$RUNNER_TEMP/retoc.tar.xz" | sha256sum --check
+          mkdir "$RUNNER_TEMP/retoc"
+          tar -xJf "$RUNNER_TEMP/retoc.tar.xz" -C "$RUNNER_TEMP/retoc"
+      - run: npm test
+      - run: python tests/zen_camera_patch_test.py
+      - name: Rebuild and decode with independent reader
+        run: python scripts/build-camera-candidate.py --retoc "$RUNNER_TEMP/retoc/retoc_cli-x86_64-unknown-linux-gnu/retoc" --output "$RUNNER_TEMP/camera1005"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kalinago-camera1005-experimental
+          path: |
+            ${{ runner.temp }}/camera1005/package/TrackBridge_Kalinago_1005_P.pak.disabled
+            ${{ runner.temp }}/camera1005/package/TrackBridge_Kalinago_1005_P.utoc
+            ${{ runner.temp }}/camera1005/package/TrackBridge_Kalinago_1005_P.ucas
+            ${{ runner.temp }}/camera1005/package/test-manifest.json
+            ${{ runner.temp }}/camera1005/LEEME.md
+            ${{ runner.temp }}/camera1005/Manage-KalinagoTest.ps1
+            ${{ runner.temp }}/camera1005/build-log.txt
+            ${{ runner.temp }}/camera1005/camera-readback.json
+            ${{ runner.temp }}/camera1005/level-patch.json
+            ${{ runner.temp }}/camera1005/offline-audit.json
+            ${{ runner.temp }}/camera1005/visibility.json
+          retention-days: 30
+          compression-level: 6
