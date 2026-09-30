@@ -40,6 +40,17 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Kalinago-camera1005-experimental
-          path: ${{ runner.temp }}/camera1005/
+          path: |
+            ${{ runner.temp }}/camera1005/package/TrackBridge_Kalinago_1005_P.pak.disabled
+            ${{ runner.temp }}/camera1005/package/TrackBridge_Kalinago_1005_P.utoc
+            ${{ runner.temp }}/camera1005/package/TrackBridge_Kalinago_1005_P.ucas
+            ${{ runner.temp }}/camera1005/package/test-manifest.json
+            ${{ runner.temp }}/camera1005/LEEME.md
+            ${{ runner.temp }}/camera1005/Manage-KalinagoTest.ps1
+            ${{ runner.temp }}/camera1005/build-log.txt
+            ${{ runner.temp }}/camera1005/camera-readback.json
+            ${{ runner.temp }}/camera1005/level-patch.json
+            ${{ runner.temp }}/camera1005/offline-audit.json
+            ${{ runner.temp }}/camera1005/visibility.json
           retention-days: 30
           compression-level: 6
